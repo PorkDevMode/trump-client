@@ -242,20 +242,40 @@ end
 
 local function LoadConfiguration(Configuration)
 	local Data = HttpService:JSONDecode(Configuration)
-	for FlagName, FlagValue in next, Data do
-		if RayfieldLibrary.Flags[FlagName] then
-			spawn(function() 
-				if RayfieldLibrary.Flags[FlagName].Type == "ColorPicker" then
-					RayfieldLibrary.Flags[FlagName]:Set(UnpackColor(FlagValue))
-				else
-					if RayfieldLibrary.Flags[FlagName].CurrentValue or RayfieldLibrary.Flags[FlagName].CurrentKeybind or RayfieldLibrary.Flags[FlagName].CurrentOption or RayfieldLibrary.Flags[FlagName].Color ~= FlagValue then RayfieldLibrary.Flags[FlagName]:Set(FlagValue) end
-				end    
-			end)
-		else
-			RayfieldLibrary:Notify({Title = "Flag Error", Content = "Rayfield was unable to find '"..FlagName.. "'' in the current script"})
+	
+	local function SetFlag(FlagName, FlagValue)
+		local attempts = 0
+		local max_attempts = 5
+		local success = false
+		
+		while attempts < max_attempts and not success do
+			if RayfieldLibrary.Flags[FlagName] then
+				spawn(function()
+					if RayfieldLibrary.Flags[FlagName].Type == "ColorPicker" then
+						RayfieldLibrary.Flags[FlagName]:Set(UnpackColor(FlagValue))
+					else
+						if RayfieldLibrary.Flags[FlagName].CurrentValue or RayfieldLibrary.Flags[FlagName].CurrentKeybind or RayfieldLibrary.Flags[FlagName].CurrentOption or RayfieldLibrary.Flags[FlagName].Color ~= FlagValue then 
+							RayfieldLibrary.Flags[FlagName]:Set(FlagValue) 
+						end
+					end    
+				end)
+				success = true
+			else
+				attempts = attempts + 1
+				wait(1)
+			end
+		end
+		
+		if not success then
+			RayfieldLibrary:Notify({Title = "Flag Error", Content = "Rayfield was unable to find '"..FlagName.. "' in the current script"})
 		end
 	end
+	
+	for FlagName, FlagValue in next, Data do
+		SetFlag(FlagName, FlagValue)
+	end
 end
+
 
 local function SaveConfiguration()
 	if not CEnabled then return end
@@ -2442,7 +2462,7 @@ Topbar.Hide.MouseButton1Click:Connect(function()
 end)
 
 UserInputService.InputBegan:Connect(function(input, processed)
-	if (input.KeyCode == Enum.KeyCode.K and not processed) then
+	if (input.KeyCode == Enum.KeyCode.L and not processed) then
 		if Debounce then return end
 		if Hidden then
 			Hidden = false
